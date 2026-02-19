@@ -63,3 +63,4 @@ jobs:
       - name: Push Product Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
+
