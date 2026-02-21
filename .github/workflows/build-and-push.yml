@@ -64,3 +64,36 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
 
+  deploy-argocd:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
+
+      - name: Install ArgoCD Namespace
+        run: |
+          kubectl apply -f cluster-setup/argocd/namespace.yaml
+
+      - name: Install ArgoCD
+        run: |
+          kubectl apply -f cluster-setup/argocd/argocd-install.yaml
+
+      - name: Deploy ArgoCD Application
+        run: |
+          kubectl apply -f cluster-setup/argocd/app-deploy.yaml
