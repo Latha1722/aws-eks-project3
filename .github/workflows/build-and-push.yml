@@ -36,6 +36,7 @@ jobs:
           docker build -t auth-service ./backend/microservices/auth-service
           docker tag auth-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
+
       - name: Push Auth Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
@@ -46,6 +47,7 @@ jobs:
           docker build -t user-service ./backend/microservices/user-service
           docker tag user-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
+
       - name: Push User Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
@@ -56,6 +58,7 @@ jobs:
           docker build -t product-service ./backend/microservices/product-service
           docker tag product-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
+
       - name: Push Product Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
@@ -76,7 +79,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
 
       - name: Update kubeconfig
         run: |
@@ -95,16 +101,23 @@ jobs:
         run: |
           kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Install ArgoCD manifests (skip validation)
+      - name: Install ArgoCD CRDs only
         run: |
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
+          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/crds.yaml
 
       - name: Wait for ArgoCD CRDs
         run: |
-          echo "Waiting for ArgoCD CRDs..."
           kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
           kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=180s
           kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=180s
+
+      - name: Install ArgoCD manifests (without CRDs)
+        run: |
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false --server-side
+
+      - name: Wait for ArgoCD namespace to be active
+        run: |
+          kubectl wait --for=condition=Active namespace/argocd --timeout=120s
 
       - name: Deploy ArgoCD Application
         run: |
