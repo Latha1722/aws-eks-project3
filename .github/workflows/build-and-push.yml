@@ -102,17 +102,20 @@ jobs:
 
       - name: Wait for ArgoCD to be ready
         run: |
-          echo "=== Checking ArgoCD namespace ==="
-          kubectl get all -n argocd
-
-          echo "=== Checking argocd-server pod status ==="
+          echo "=== All pods in argocd ==="
           kubectl get pods -n argocd
 
           echo "=== Describing argocd-server pod ==="
-          kubectl describe pod -l app.kubernetes.io/name=argocd-server -n argocd
+          kubectl describe pod -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].metadata.name}') || true
 
-          echo "=== Pod logs ==="
-          kubectl logs -l app.kubernetes.io/name=argocd-server -n argocd --tail=50 || true
+          echo "=== Logs of argocd-server pod ==="
+          kubectl logs -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].metadata.name}') --tail=80 || true
+
+          echo "=== Describing argocd-repo-server pod ==="
+          kubectl describe pod -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}') || true
+
+          echo "=== Logs of argocd-repo-server pod ==="
+          kubectl logs -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}') --tail=80 || true
 
           echo "=== Waiting for rollout ==="
           kubectl rollout status deployment/argocd-server \
