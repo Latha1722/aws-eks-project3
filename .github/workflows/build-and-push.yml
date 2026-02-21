@@ -10,9 +10,12 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
+
+  # ─────────────────────────────────────────
+  # JOB 1 — Build and Push Images to ECR
+  # ─────────────────────────────────────────
   build-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -63,9 +66,13 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
 
+
+  # ─────────────────────────────────────────
+  # JOB 2 — Install ArgoCD + Apply App Config
+  # ─────────────────────────────────────────
   deploy-argocd:
-    needs: build-and-push
     runs-on: ubuntu-latest
+    needs: build-and-push        # runs only after Job 1 succeeds
 
     steps:
       - name: Checkout repository
@@ -78,47 +85,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install kubectl
+      - name: Connect kubectl to EKS cluster
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
-
-      - name: Delete ArgoCD namespace if exists
-        run: |
-          if kubectl get namespace argocd >/dev/null 2>&1; then
-            echo "Deleting existing ArgoCD namespace..."
-            kubectl delete namespace argocd --wait=true
-          else
-            echo "ArgoCD namespace does not exist. Skipping delete."
-          fi
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
 
       - name: Create ArgoCD namespace
         run: |
-          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f cluster-setup/argocd/namespace.yaml
 
-      - name: Install ArgoCD CRDs only
+      - name: Install ArgoCD
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/crds.yaml
+          kubectl apply -f cluster-setup/argocd/argocd-install.yaml \
+            --namespace argocd
 
-      - name: Wait for ArgoCD CRDs
+      - name: Wait for ArgoCD to be ready
         run: |
-          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
-          kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=180s
-          kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=180s
+          kubectl rollout status deployment/argocd-server \
+            -n argocd \
+            --timeout=120s
 
-      - name: Install ArgoCD manifests (without CRDs)
+      - name: Apply ArgoCD App (points to your k8s-deployments folder)
         run: |
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false --server-side
-
-      - name: Wait for ArgoCD namespace to be active
-        run: |
-          kubectl wait --for=condition=Active namespace/argocd --timeout=120s
-
-      - name: Deploy ArgoCD Application
-        run: |
-          kubectl apply -f cluster-setup/argocd/app-deploy.yaml
+          kubectl apply -f cluster-setup/argocd/app-deploy.yaml \
+            --namespace argocd
