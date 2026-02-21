@@ -94,6 +94,11 @@ jobs:
         run: |
           kubectl apply -f cluster-setup/argocd/argocd-install.yaml
 
+      - name: Wait for ArgoCD CRDs
+        run: |
+          echo "Waiting for ArgoCD CRDs..."
+          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
+
       - name: Deploy ArgoCD Application
         run: |
           kubectl apply -f cluster-setup/argocd/app-deploy.yaml
