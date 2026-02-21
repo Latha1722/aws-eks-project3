@@ -97,6 +97,8 @@ jobs:
 
       - name: Install ArgoCD using core manifest
         run: |
+          kubectl delete deployment argocd-repo-server -n argocd --ignore-not-found=true
+          kubectl delete deployment argocd-server -n argocd --ignore-not-found=true
           kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.3/manifests/core-install.yaml
  
       - name: Patch ArgoCD server to reduce memory
