@@ -79,36 +79,30 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        uses: actions/setup-kubectl@v3
+
+      - name: Install Helm
+        uses: actions/setup-helm@v3
 
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
 
-      - name: Delete ArgoCD namespace if exists
-        run: |
-          if kubectl get namespace argocd >/dev/null 2>&1; then
-            echo "Deleting existing ArgoCD namespace..."
-            kubectl delete namespace argocd --wait=true
-          else
-            echo "ArgoCD namespace does not exist. Skipping delete."
-          fi
-
-      - name: Create ArgoCD namespace
+      - name: Create ArgoCD namespace if missing
         run: |
           kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-
-      - name: Install ArgoCD manifests (skip validation)
+      - name: Install ArgoCD via Helm
         run: |
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+          helm upgrade --install argocd argo/argo-cd \
+            --namespace argocd --create-namespace \
+            --set server.service.type=LoadBalancer
 
-      - name: Wait for ArgoCD CRDs
+      - name: Wait for ArgoCD to be ready
         run: |
-          echo "Waiting for ArgoCD CRDs..."
-          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
-          kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=120s
-          kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=120s
+          kubectl rollout status deployment/argocd-server -n argocd --timeout=180s
 
       - name: Deploy ArgoCD Application
         run: |
