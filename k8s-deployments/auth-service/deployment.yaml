@@ -15,6 +15,8 @@ spec:
       labels:
         app: auth-service
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: auth-service
           image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/auth-service:latest
