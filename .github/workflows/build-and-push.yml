@@ -89,6 +89,15 @@ jobs:
       - name: Install ArgoCD Namespace
         run: |
           kubectl apply -f cluster-setup/argocd/namespace.yaml
+     
+      - name: Delete ArgoCD (if exists)
+        run: |
+          if kubectl get namespace argocd >/dev/null 2>&1; then
+            echo "Deleting existing ArgoCD namespace..."
+            kubectl delete namespace argocd --wait=true
+          else
+            echo "ArgoCD namespace does not exist. Skipping delete."
+          fi
 
       - name: Install ArgoCD
         run: |
