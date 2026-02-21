@@ -95,10 +95,13 @@ jobs:
         run: |
           kubectl apply -f cluster-setup/argocd/namespace.yaml
 
-      - name: Install ArgoCD
+      - name: Install ArgoCD using core manifest
         run: |
-          kubectl apply -f cluster-setup/argocd/argocd-install.yaml \
-            --namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.3/manifests/core-install.yaml
+ 
+      - name: Patch ArgoCD server to reduce memory
+        run: |
+          kubectl patch deployment argocd-server -n argocd --patch '{"spec":{"template":{"spec":{"containers":[{"name":"argocd-server","resources":{"requests":{"memory":"128Mi","cpu":"50m"},"limits":{"memory":"256Mi","cpu":"200m"}}}]}}}}'
 
       - name: Wait for ArgoCD to be ready
         run: |
