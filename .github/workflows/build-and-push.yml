@@ -24,12 +24,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
           docker login --username AWS --password-stdin \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
       # ================= AUTH SERVICE =================
       - name: Build Auth Service Image
         run: |
@@ -39,6 +39,7 @@ jobs:
       - name: Push Auth Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
+
       # ================= USER SERVICE =================
       - name: Build User Service Image
         run: |
@@ -48,6 +49,7 @@ jobs:
       - name: Push User Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
+
       # ================= PRODUCT SERVICE =================
       - name: Build Product Service Image
         run: |
@@ -74,16 +76,13 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        
+        uses: actions/setup-kubectl@v3
+
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
-      - name: Install ArgoCD Namespace
-        run: |
-          kubectl apply -f cluster-setup/argocd/namespace.yaml
-     
-      - name: Delete ArgoCD (if exists)
+
+      - name: Delete ArgoCD namespace if exists
         run: |
           if kubectl get namespace argocd >/dev/null 2>&1; then
             echo "Deleting existing ArgoCD namespace..."
@@ -91,14 +90,22 @@ jobs:
           else
             echo "ArgoCD namespace does not exist. Skipping delete."
           fi
-      - name: Install ArgoCD (skip validation)
-        run: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
 
+      - name: Create ArgoCD namespace
+        run: |
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Install ArgoCD manifests (skip validation)
+        run: |
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
 
       - name: Wait for ArgoCD CRDs
         run: |
           echo "Waiting for ArgoCD CRDs..."
-          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
+          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
+          kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=180s
+          kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=180s
+
       - name: Deploy ArgoCD Application
         run: |
           kubectl apply -f cluster-setup/argocd/app-deploy.yaml
