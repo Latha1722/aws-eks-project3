@@ -100,30 +100,11 @@ jobs:
           kubectl delete deployment argocd-repo-server -n argocd --ignore-not-found=true
           kubectl delete deployment argocd-server -n argocd --ignore-not-found=true
           kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.3/manifests/core-install.yaml
- 
-      - name: Patch ArgoCD server to reduce memory
-        run: |
-          kubectl patch deployment argocd-server -n argocd --patch '{"spec":{"template":{"spec":{"containers":[{"name":"argocd-server","resources":{"requests":{"memory":"128Mi","cpu":"50m"},"limits":{"memory":"256Mi","cpu":"200m"}}}]}}}}'
+
 
       - name: Wait for ArgoCD to be ready
         run: |
-          echo "=== All pods in argocd ==="
-          kubectl get pods -n argocd
-
-          echo "=== Describing argocd-server pod ==="
-          kubectl describe pod -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].metadata.name}') || true
-
-          echo "=== Logs of argocd-server pod ==="
-          kubectl logs -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].metadata.name}') --tail=80 || true
-
-          echo "=== Describing argocd-repo-server pod ==="
-          kubectl describe pod -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}') || true
-
-          echo "=== Logs of argocd-repo-server pod ==="
-          kubectl logs -n argocd $(kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-repo-server -o jsonpath='{.items[0].metadata.name}') --tail=80 || true
-
-          echo "=== Waiting for rollout ==="
-          kubectl rollout status deployment/argocd-server \
+          kubectl rollout status statefulset/argocd-application-controller \
             -n argocd \
             --timeout=300s
 
