@@ -1,4 +1,4 @@
-name: Build and Push Docker Images to ECR
+name: Build, Push Docker Images and Deploy to ArgoCD
 
 on:
   push:
@@ -23,7 +23,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
 
       - name: Login to Amazon ECR
         run: |
@@ -64,57 +63,57 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
 
-deploy-argocd:
-  needs: build-and-push
-  runs-on: ubuntu-latest
+  deploy-argocd:
+    needs: build-and-push
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
 
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
 
-    - name: Delete ArgoCD namespace if exists
-      run: |
-        if kubectl get namespace argocd >/dev/null 2>&1; then
-          echo "Deleting existing ArgoCD namespace..."
-          kubectl delete namespace argocd --wait=true
-        else
-          echo "ArgoCD namespace does not exist. Skipping delete."
-        fi
+      - name: Delete ArgoCD namespace if exists
+        run: |
+          if kubectl get namespace argocd >/dev/null 2>&1; then
+            echo "Deleting existing ArgoCD namespace..."
+            kubectl delete namespace argocd --wait=true
+          else
+            echo "ArgoCD namespace does not exist. Skipping delete."
+          fi
 
-    - name: Create ArgoCD namespace
-      run: |
-        kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+      - name: Create ArgoCD namespace
+        run: |
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-    - name: Wait for ArgoCD namespace
-      run: |
-        echo "Waiting for ArgoCD namespace to be Active..."
-        kubectl wait --for=condition=Active namespace/argocd --timeout=60s
+      - name: Wait for ArgoCD namespace
+        run: |
+          echo "Waiting for ArgoCD namespace to be Active..."
+          kubectl wait --for=condition=Active namespace/argocd --timeout=60s
 
-    - name: Install ArgoCD manifests (skip validation)
-      run: |
-        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
+      - name: Install ArgoCD manifests (skip validation)
+        run: |
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
 
-    - name: Wait for ArgoCD CRDs
-      run: |
-        echo "Waiting for ArgoCD CRDs..."
-        kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
-        kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=120s
-        kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=120s
+      - name: Wait for ArgoCD CRDs
+        run: |
+          echo "Waiting for ArgoCD CRDs..."
+          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
+          kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=120s
+          kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=120s
 
-    - name: Deploy ArgoCD Application
-      run: |
-        kubectl apply -f cluster-setup/argocd/app-deploy.yaml
+      - name: Deploy ArgoCD Application
+        run: |
+          kubectl apply -f cluster-setup/argocd/app-deploy.yaml
