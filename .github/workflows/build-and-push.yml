@@ -99,10 +99,12 @@ jobs:
             echo "ArgoCD namespace does not exist. Skipping delete."
           fi
 
-      - name: Install ArgoCD
+      - name: Install ArgoCD via Helm
         run: |
-          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+          helm upgrade --install argocd argo/argo-cd \
+            --namespace argocd --create-namespace
 
 
       - name: Wait for ArgoCD CRDs
