@@ -112,3 +112,38 @@ jobs:
         run: |
           kubectl apply -f cluster-setup/argocd/app-deploy.yaml \
             --namespace argocd
+
+  verify-deployment:
+    runs-on: ubuntu-latest
+    needs: deploy-argocd
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Connect kubectl to EKS cluster
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Check everything
+        run: |
+          echo "=== ArgoCD App Status ==="
+          kubectl get application mern-app -n argocd
+
+          echo "=== All Namespaces ==="
+          kubectl get namespaces
+
+          echo "=== Pods in mern-microservices ==="
+          kubectl get pods -n mern-microservices
+
+          echo "=== Services in mern-microservices ==="
+          kubectl get svc -n mern-microservices
+
+          echo "=== Ingress ==="
+          kubectl get ingress -n mern-microservices
