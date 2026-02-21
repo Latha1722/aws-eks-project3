@@ -1,4 +1,4 @@
-name: Build, Push Docker Images and Deploy to ArgoCD
+name: Build and Push Docker Images to ECR
 
 on:
   push:
@@ -36,7 +36,6 @@ jobs:
           docker build -t auth-service ./backend/microservices/auth-service
           docker tag auth-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
-
       - name: Push Auth Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
@@ -47,7 +46,6 @@ jobs:
           docker build -t user-service ./backend/microservices/user-service
           docker tag user-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
-
       - name: Push User Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
@@ -58,7 +56,6 @@ jobs:
           docker build -t product-service ./backend/microservices/product-service
           docker tag product-service:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
-
       - name: Push Product Service Image
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
@@ -81,28 +78,33 @@ jobs:
       - name: Install kubectl
         uses: actions/setup-kubectl@v3
 
-      - name: Install Helm
-        uses: actions/setup-helm@v3
-
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name mern-microservices-cluster
 
-      - name: Create ArgoCD namespace if missing
+      - name: Delete ArgoCD namespace if exists
+        run: |
+          if kubectl get namespace argocd >/dev/null 2>&1; then
+            echo "Deleting existing ArgoCD namespace..."
+            kubectl delete namespace argocd --wait=true
+          else
+            echo "ArgoCD namespace does not exist. Skipping delete."
+          fi
+
+      - name: Create ArgoCD namespace
         run: |
           kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Install ArgoCD via Helm
+      - name: Install ArgoCD manifests (skip validation)
         run: |
-          helm repo add argo https://argoproj.github.io/argo-helm
-          helm repo update
-          helm upgrade --install argocd argo/argo-cd \
-            --namespace argocd --create-namespace \
-            --set server.service.type=LoadBalancer
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
 
-      - name: Wait for ArgoCD to be ready
+      - name: Wait for ArgoCD CRDs
         run: |
-          kubectl rollout status deployment/argocd-server -n argocd --timeout=180s
+          echo "Waiting for ArgoCD CRDs..."
+          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=180s
+          kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=180s
+          kubectl wait --for=condition=Established crd/applicationsets.argoproj.io --timeout=180s
 
       - name: Deploy ArgoCD Application
         run: |
