@@ -100,6 +100,24 @@ jobs:
           kubectl delete deployment argocd-repo-server -n argocd --ignore-not-found=true
           kubectl delete deployment argocd-server -n argocd --ignore-not-found=true
           kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.3/manifests/core-install.yaml
+      - name: Create mern-microservices namespace
+        run: |
+          kubectl create namespace mern-microservices --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create ECR image pull secret
+        run: |
+          kubectl create secret docker-registry ecr-secret \
+            --docker-server=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }}) \
+            --namespace=mern-microservices \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Force ArgoCD sync
+        run: |
+          kubectl patch application mern-app -n argocd \
+            --type merge \
+            -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
 
 
       # - name: Wait for ArgoCD to be ready
