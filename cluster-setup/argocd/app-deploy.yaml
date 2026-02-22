@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/Latha1722/aws-eks-project3.git
-    targetRevision: HEAD
+    targetRevision: main
     path: k8s-deployments
   destination:
     server: https://kubernetes.default.svc
