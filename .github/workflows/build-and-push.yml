@@ -130,3 +130,11 @@ jobs:
           echo "=== Ingress URL ==="
           kubectl get ingress -n mern-microservices
 
+          echo "=== Load Balancer Controller pods ==="
+          kubectl get pods -n kube-system | grep aws-load-balancer
+
+          echo "=== Ingress status ==="
+          kubectl get ingress -n mern-microservices
+
+          echo "=== Ingress details ==="
+          kubectl describe ingress mern-ingress -n mern-microservices
