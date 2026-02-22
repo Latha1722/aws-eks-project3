@@ -112,7 +112,13 @@ jobs:
             --docker-password=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }}) \
             --namespace=mern-microservices \
             --dry-run=client -o yaml | kubectl apply -f -
-
+   
+      - name: Apply ArgoCD App (points to your k8s-deployments folder)
+        run: |
+          kubectl apply -f cluster-setup/argocd/app-deploy.yaml \
+            --namespace argocd
+      
+      
       - name: Force ArgoCD sync
         run: |
           kubectl patch application mern-app -n argocd \
@@ -126,10 +132,7 @@ jobs:
       #       -n argocd \
       #       --timeout=300s
 
-      - name: Apply ArgoCD App (points to your k8s-deployments folder)
-        run: |
-          kubectl apply -f cluster-setup/argocd/app-deploy.yaml \
-            --namespace argocd
+      
 
   verify-deployment:
     runs-on: ubuntu-latest
