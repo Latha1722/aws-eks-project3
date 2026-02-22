@@ -179,3 +179,9 @@ jobs:
 
           echo "=== Services ==="
           kubectl get svc -n mern-microservices
+
+          echo "=== Auth service logs ==="
+          kubectl logs -n mern-microservices -l app=auth-service --tail=50
+
+          echo "=== User service logs ==="
+          kubectl logs -n mern-microservices -l app=user-service --tail=50
