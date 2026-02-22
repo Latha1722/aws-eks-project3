@@ -185,3 +185,6 @@ jobs:
 
           echo "=== User service logs ==="
           kubectl logs -n mern-microservices -l app=user-service --tail=50
+
+           echo "=== product service logs ==="
+          kubectl logs -n mern-microservices -l app=product-service --tail=50
