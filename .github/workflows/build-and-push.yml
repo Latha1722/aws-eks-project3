@@ -127,3 +127,6 @@ jobs:
           echo "=== Product logs ==="
           kubectl logs -n mern-microservices -l app=product-service --tail=30
 
+          echo "=== Ingress URL ==="
+          kubectl get ingress -n mern-microservices
+
