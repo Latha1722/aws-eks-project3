@@ -138,3 +138,4 @@ jobs:
 
           echo "=== Ingress details ==="
           kubectl describe ingress mern-ingress -n mern-microservices
+
