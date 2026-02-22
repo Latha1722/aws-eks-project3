@@ -33,44 +33,29 @@ jobs:
           docker login --username AWS --password-stdin \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-      # ================= AUTH SERVICE =================
-      - name: Build Auth Service Image
+      - name: Build and Push Auth Service
         run: |
           docker build -t auth-service ./backend/microservices/auth-service
-          docker tag auth-service:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
-
-      - name: Push Auth Service Image
-        run: |
+          docker tag auth-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
 
-      # ================= USER SERVICE =================
-      - name: Build User Service Image
+      - name: Build and Push User Service
         run: |
           docker build -t user-service ./backend/microservices/user-service
-          docker tag user-service:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
-
-      - name: Push User Service Image
-        run: |
+          docker tag user-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/user-service:latest
 
-      # ================= PRODUCT SERVICE =================
-      - name: Build Product Service Image
+      - name: Build and Push Product Service
         run: |
           docker build -t product-service ./backend/microservices/product-service
-          docker tag product-service:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
-
-      - name: Push Product Service Image
-        run: |
+          docker tag product-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/product-service:latest
 
 
   # ─────────────────────────────────────────
-  # JOB 2 — Install ArgoCD + Apply App Config
+  # JOB 2 — Deploy to EKS
   # ─────────────────────────────────────────
-  deploy-and-apply:
+  deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
 
@@ -106,85 +91,34 @@ jobs:
 
       - name: Apply mongo secret
         run: |
+          kubectl delete secret mongo-secret -n mern-microservices --ignore-not-found=true
           kubectl apply -f k8s-deployments/mongo-secret.yaml -n mern-microservices
 
-      - name: Delete ArgoCD to free node space
-        run: |
-          kubectl delete namespace argocd --ignore-not-found=true
-
-      - name: Deploy auth service
+      - name: Deploy all services
         run: |
           kubectl apply -f k8s-deployments/auth-service/deployment.yaml -n mern-microservices
           kubectl apply -f k8s-deployments/auth-service/service.yaml -n mern-microservices
-
-      - name: Deploy user service
-        run: |
           kubectl apply -f k8s-deployments/user-service/deployment.yaml -n mern-microservices
           kubectl apply -f k8s-deployments/user-service/service.yaml -n mern-microservices
-
-      - name: Deploy product service
-        run: |
           kubectl apply -f k8s-deployments/product-service/deployment.yaml -n mern-microservices
           kubectl apply -f k8s-deployments/product-service/service.yaml -n mern-microservices
 
-      - name: Wait for pods
-        run: sleep 30
+      - name: Wait for pods to start
+        run: sleep 40
 
-      - name: Check pod status
+      - name: Check status
         run: |
-          echo "=== Pods ==="
-          kubectl get pods -n mern-microservices
-
-          echo "=== All pods on cluster ==="
-          kubectl get pods -A
-
-          echo "=== Services ==="
-          kubectl get svc -n mern-microservices
-
-          echo "=== Pod details if any failing ==="
-          kubectl describe pods -n mern-microservices
-
-
-  verify-deployment:
-    runs-on: ubuntu-latest
-    needs: deploy-and-apply
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Connect kubectl to EKS cluster
-        run: |
-          aws eks update-kubeconfig \
-            --region $AWS_REGION \
-            --name ${{ secrets.EKS_CLUSTER_NAME }}
-
-      - name: Check everything
-        run: |
-          echo "=== Node status ==="
-          kubectl get nodes
-
-          echo "=== Node resources ==="
-          kubectl describe nodes | grep -A 10 "Allocated resources"
-
-          echo "=== Why auth pod is pending ==="
-          kubectl describe pod -n mern-microservices -l app=auth-service
-
           echo "=== Pods ==="
           kubectl get pods -n mern-microservices
 
           echo "=== Services ==="
           kubectl get svc -n mern-microservices
 
-          echo "=== Auth service logs ==="
-          kubectl logs -n mern-microservices -l app=auth-service --tail=50
+          echo "=== Auth logs ==="
+          kubectl logs -n mern-microservices -l app=auth-service --tail=30
 
-          echo "=== User service logs ==="
-          kubectl logs -n mern-microservices -l app=user-service --tail=50
+          echo "=== User logs ==="
+          kubectl logs -n mern-microservices -l app=user-service --tail=30
 
-           echo "=== product service logs ==="
-          kubectl logs -n mern-microservices -l app=product-service --tail=50
+          echo "=== Product logs ==="
+          kubectl logs -n mern-microservices -l app=product-service --tail=30
