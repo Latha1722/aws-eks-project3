@@ -158,18 +158,17 @@ jobs:
 
       - name: Check everything
         run: |
-          echo "=== ArgoCD App Status ==="
-          kubectl get application mern-app -n argocd
+          echo "=== Node status ==="
+          kubectl get nodes
 
-          echo "=== All Namespaces ==="
-          kubectl get namespaces
+          echo "=== Node resources ==="
+          kubectl describe nodes | grep -A 10 "Allocated resources"
 
-          echo "=== Pods in mern-microservices ==="
+          echo "=== Why auth pod is pending ==="
+          kubectl describe pod -n mern-microservices -l app=auth-service
+
+          echo "=== Pods ==="
           kubectl get pods -n mern-microservices
 
-          echo "=== Services in mern-microservices ==="
+          echo "=== Services ==="
           kubectl get svc -n mern-microservices
-
-          echo "=== Ingress ==="
-          kubectl get ingress -n mern-microservices
-          
