@@ -103,6 +103,10 @@ jobs:
           kubectl apply -f k8s-deployments/product-service/deployment.yaml -n mern-microservices
           kubectl apply -f k8s-deployments/product-service/service.yaml -n mern-microservices
 
+      - name: Apply ingress
+        run: |
+          kubectl apply -f k8s-deployments/ingress.yaml -n mern-microservices
+
       - name: Wait for pods to start
         run: sleep 40
 
