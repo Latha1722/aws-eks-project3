@@ -165,3 +165,4 @@ jobs:
 
           echo "=== Ingress ==="
           kubectl get ingress -n mern-microservices
+          
