@@ -33,3 +33,11 @@ spec:
                 name: product-service
                 port:
                   number: 5002
+
+           - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
