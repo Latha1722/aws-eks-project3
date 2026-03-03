@@ -1,13 +1,5 @@
 name: Build and Deploy Frontend
 
-# on:
-#   push:
-#     branches:
-#       - main
-#     paths:
-#       - 'frontend/**'
-#       - 'k8s-deployments/frontend/**'
-
 on:
   workflow_dispatch:
   push:
@@ -15,7 +7,7 @@ on:
       - main
     paths:
       - 'frontend/**'
-      - 'k8s-deployments/frontend/**'
+      - 'k8s-deployments/**'
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -37,6 +29,39 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $EKS_CLUSTER_NAME
+
+      # 🔥 Install Helm
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      # 🔥 Add Helm Repo
+      - name: Add EKS Helm Repo
+        run: |
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+      # 🔥 Install or Upgrade ALB Controller
+      - name: Install AWS Load Balancer Controller
+        run: |
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --create-namespace \
+            --set clusterName=${{ secrets.EKS_CLUSTER_NAME }} \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set enableCertManager=false
+
+      # 🔥 WAIT FOR CONTROLLER (VERY IMPORTANT)
+      - name: Wait for Load Balancer Controller
+        run: |
+          kubectl rollout status deployment aws-load-balancer-controller -n kube-system --timeout=120s
+
+      # 🚀 Build & Push Image
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
@@ -44,69 +69,32 @@ jobs:
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
       - name: Build Docker image
-        run: |
-          docker build -t frontend ./frontend
+        run: docker build -t frontend ./frontend
 
       - name: Tag Docker image
         run: |
           docker tag frontend:latest \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/frontend:latest
 
-      - name: Push Docker image to ECR
+      - name: Push Docker image
         run: |
           docker push \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/frontend:latest
 
-      - name: Update kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig \
-          --region $AWS_REGION \
-          --name $EKS_CLUSTER_NAME
-
-    
-      - name: Deploy Kubernetes Resources
+      # 🚀 Deploy Kubernetes Resources
+      - name: Deploy Namespace & Services
         run: |
           kubectl apply -f k8s-deployments/namespace.yaml
-          kubectl apply -f k8s-deployments/frontend/deployment.yaml
-          kubectl apply -f k8s-deployments/frontend/service.yaml
+          kubectl apply -f k8s-deployments/frontend/
 
-      - name: Install AWS Load Balancer Controller
-        run: |
-          helm repo add eks https://aws.github.io/eks-charts
-          helm repo update
-
-          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
-            -n kube-system \
-            --set clusterName=${{ secrets.EKS_CLUSTER_NAME }} \
-            --set serviceAccount.create=true \
-            --set serviceAccount.name=aws-load-balancer-controller \
-            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/aws-load-balancer-controller \
-            --set enableCertManager=false
-
-      - name: Wait for Load Balancer Controller
-        run: |
-          kubectl rollout status deployment aws-load-balancer-controller -n kube-system
-           
-      - name: Apply ingress
+      - name: Apply Ingress
         run: |
           kubectl apply -f k8s-deployments/ingress.yaml -n mern-microservices
 
-      - name: Wait for pods to start
-        run: sleep 40
-
-      - name: Check status
+      - name: Check Deployment Status
         run: |
           echo "=== Pods ==="
           kubectl get pods -n mern-microservices
 
-          echo "=== Ingress URL ==="
+          echo "=== Ingress ==="
           kubectl get ingress -n mern-microservices
-
-          echo "=== Load Balancer Controller pods ==="
-          kubectl get pods -n kube-system | grep aws-load-balancer
-
-          echo "=== Ingress status ==="
-          kubectl get ingress -n mern-microservices
-
-          echo "=== Ingress details ==="
-          kubectl describe ingress mern-ingress -n mern-microservices
