@@ -87,6 +87,10 @@ jobs:
           kubectl apply -f k8s-deployments/namespace.yaml
           kubectl apply -f k8s-deployments/frontend/
 
+      - name: Show Frontend Logs
+        run: |
+          kubectl logs deployment/frontend -n mern-microservices
+
       - name: Apply Ingress
         run: |
           kubectl apply -f k8s-deployments/ingress.yaml -n mern-microservices
