@@ -69,3 +69,39 @@ jobs:
           kubectl apply -f k8s-deployments/namespace.yaml
           kubectl apply -f k8s-deployments/frontend/deployment.yaml
           kubectl apply -f k8s-deployments/frontend/service.yaml
+
+      - name: Install AWS Load Balancer Controller
+        run: |
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=${{ secrets.EKS_CLUSTER_NAME }} \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/aws-load-balancer-controller
+
+      - name: Apply ingress
+        run: |
+          kubectl apply -f k8s-deployments/ingress.yaml -n mern-microservices
+
+      - name: Wait for pods to start
+        run: sleep 40
+
+      - name: Check status
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n mern-microservices
+
+          echo "=== Ingress URL ==="
+          kubectl get ingress -n mern-microservices
+
+          echo "=== Load Balancer Controller pods ==="
+          kubectl get pods -n kube-system | grep aws-load-balancer
+
+          echo "=== Ingress status ==="
+          kubectl get ingress -n mern-microservices
+
+          echo "=== Ingress details ==="
+          kubectl describe ingress mern-ingress -n mern-microservices
