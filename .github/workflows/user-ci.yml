@@ -1,0 +1,40 @@
+name: User Service CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'microservices/user-service/**'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  IMAGE_NAME: user-service
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - run: |
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - run: |
+          docker build -t $IMAGE_NAME:${{ github.sha }} ./microservices/user-service
+
+      - run: |
+          docker tag $IMAGE_NAME:${{ github.sha }} \
+          $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+
+      - run: |
+          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
