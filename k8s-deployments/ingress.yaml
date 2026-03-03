@@ -4,38 +4,14 @@ metadata:
   name: mern-ingress
   namespace: mern-microservices
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
 spec:
   ingressClassName: alb
   rules:
     - http:
         paths:
-          - path: /api/auth
-            pathType: Prefix
-            backend:
-              service:
-                name: auth-service
-                port:
-                  number: 5001
-
-          - path: /api/users
-            pathType: Prefix
-            backend:
-              service:
-                name: user-service
-                port:
-                  number: 5003
-
-          - path: /api/products
-            pathType: Prefix
-            backend:
-              service:
-                name: product-service
-                port:
-                  number: 5002
-
           - path: /
             pathType: Prefix
             backend:
@@ -43,3 +19,54 @@ spec:
                 name: frontend-service
                 port:
                   number: 80
+
+
+
+
+
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: mern-ingress
+#   namespace: mern-microservices
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#     alb.ingress.kubernetes.io/target-type: ip
+# spec:
+#   ingressClassName: alb
+#   rules:
+#     - http:
+#         paths:
+#           - path: /api/auth
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: auth-service
+#                 port:
+#                   number: 5001
+
+#           - path: /api/users
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: user-service
+#                 port:
+#                   number: 5003
+
+#           - path: /api/products
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: product-service
+#                 port:
+#                   number: 5002
+
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: frontend-service
+#                 port:
+#                   number: 80
