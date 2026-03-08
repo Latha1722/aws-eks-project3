@@ -33,6 +33,6 @@ resource "helm_release" "aws_load_balancer_controller" {
 
   depends_on = [
     module.eks,
-    module.aws_load_balancer_controller_irsa_role
+    kubernetes_service_account.aws_load_balancer_controller
   ]
 }
