@@ -8,4 +8,8 @@ resource "kubernetes_service_account" "aws_load_balancer_controller" {
       "eks.amazonaws.com/role-arn" = module.aws_load_balancer_controller_irsa_role.iam_role_arn
     }
   }
+
+  depends_on = [
+    module.eks
+  ]
 }
