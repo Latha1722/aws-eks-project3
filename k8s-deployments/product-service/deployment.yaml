@@ -17,7 +17,7 @@ spec:
         - name: product-container
           image: <YOUR_ECR>/product-service:latest
           ports:
-            - containerPort: 5001
+            - containerPort: 5002
           env:
             - name: MONGO_URI
               valueFrom:
