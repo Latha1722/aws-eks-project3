@@ -30,7 +30,7 @@ jobs:
           docker login --username AWS --password-stdin $ECR_REGISTRY
 
       - run: |
-          docker build -t $IMAGE_NAME:${{ github.sha }} ./microservices/auth-service
+          docker build -t $IMAGE_NAME:${{ github.sha }} ./backend/microservices/auth-service
 
       - run: |
           docker tag $IMAGE_NAME:${{ github.sha }} \
