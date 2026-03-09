@@ -33,7 +33,7 @@ spec:
               service:
                 name: product-service
                 port:
-                  number: 5001
+                  number: 5002
 
           - path: /api/users
             pathType: Prefix
