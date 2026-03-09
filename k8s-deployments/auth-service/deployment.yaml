@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auth-container
-          image: <YOUR_ECR>/auth-service:latest
+          image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/auth-service:latest
           ports:
             - containerPort: 5001
           env:
