@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: user-container
-          image: <YOUR_ECR>/user-service:latest
+          image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/user-service:latest
           ports:
             - containerPort: 5002
           env:
