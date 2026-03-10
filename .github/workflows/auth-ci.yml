@@ -1,23 +1,21 @@
 name: Auth Service CI
-
 on:
   push:
     branches:
       - main
     paths:
       - 'backend/microservices/auth-service/**'
-
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   IMAGE_NAME: auth-service
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -33,11 +31,12 @@ jobs:
           docker build -t $IMAGE_NAME:${{ github.sha }} ./backend/microservices/auth-service
 
       - run: |
-          docker tag $IMAGE_NAME:${{ github.sha }} \
-          $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:latest
 
       - run: |
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $ECR_REGISTRY/$IMAGE_NAME:latest        
 
       - name: Update image tag in deployment
         run: |
@@ -48,4 +47,3 @@ jobs:
           git add k8s-deployments/auth-service/deployment.yaml
           git commit -m "ci: update auth-service image to ${{ github.sha }}"
           git push
-
