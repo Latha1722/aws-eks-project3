@@ -47,4 +47,5 @@ jobs:
           git config user.name "GitHub Actions"
           git add k8s-deployments/product-service/deployment.yaml                               # ← FIXED
           git commit -m "ci: update product-service image to ${{ github.sha }}"                 # ← FIXED
+          git pull --rebase origin main
           git push
