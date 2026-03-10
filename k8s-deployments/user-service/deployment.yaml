@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: user-container
-          image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/user-service:a4edca7690a5e0e3cd22c670f266801e5703a15d
+          image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/user-service:79f7c04d6c2a6120ae0f644f604e04cd130f4924
           ports:
             - containerPort: 5002
           env:
