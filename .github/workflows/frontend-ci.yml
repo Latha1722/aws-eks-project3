@@ -53,4 +53,5 @@ jobs:
           git config user.name "GitHub Actions"
           git add k8s-deployments/frontend/deployment.yaml                            # ← FIXED PATH
           git commit -m "ci: update frontend image to ${{ github.sha }}"              # ← FIXED MESSAGE
+          git pull --rebase origin main
           git push
