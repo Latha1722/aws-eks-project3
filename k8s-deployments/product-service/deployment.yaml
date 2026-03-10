@@ -17,7 +17,7 @@ spec:
         - name: product-container
           image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/product-service:4b6123212c9f4cd6a7b3503c8edb6002f34ca490
           ports:
-            - containerPort: 5003
+            - containerPort: 5002
           env:
             - name: MONGO_URI
               valueFrom:
