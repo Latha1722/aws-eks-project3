@@ -47,3 +47,4 @@ jobs:
           git add k8s-deployments/auth-service/deployment.yaml
           git commit -m "ci: update auth-service image to ${{ github.sha }}"
           git push
+
