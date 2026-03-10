@@ -46,5 +46,6 @@ jobs:
           git config user.name "GitHub Actions"
           git add k8s-deployments/auth-service/deployment.yaml
           git commit -m "ci: update auth-service image to ${{ github.sha }}"
+          git pull --rebase origin main
           git push
 
