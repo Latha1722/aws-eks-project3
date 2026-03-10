@@ -45,3 +45,13 @@ jobs:
         run: |
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
 
+      - name: Update image tag in deployment
+        run: |
+          sed -i "s|image: .*auth-service.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|" \
+            k8s-deployments/auth-service/deployment.yaml
+          git config user.email "ci@github.com"
+          git config user.name "GitHub Actions"
+          git add k8s-deployments/auth-service/deployment.yaml
+          git commit -m "ci: update auth-service image to ${{ github.sha }}"
+          git push
+
