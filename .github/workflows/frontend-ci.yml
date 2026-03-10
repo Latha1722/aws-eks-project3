@@ -1,24 +1,22 @@
 name: Frontend CI
-
 on:
   push:
     branches:
       - main
     paths:
       - 'frontend/**'
-
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   IMAGE_NAME: frontend
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}    # ← ADD THIS
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -38,20 +36,20 @@ jobs:
 
       - name: Tag image
         run: |
-          docker tag $IMAGE_NAME:${{ github.sha }} \
-          $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:latest   # ← ADD THIS
 
       - name: Push image
         run: |
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $ECR_REGISTRY/$IMAGE_NAME:latest                                # ← ADD THIS
 
       - name: Update image tag in deployment
         run: |
-          sed -i "s|image: .*auth-service.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|" \
-            k8s-deployments/auth-service/deployment.yaml
+          sed -i "s|image: .*frontend.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|" \
+            k8s-deployments/frontend/deployment.yaml                                  # ← FIXED PATH
           git config user.email "ci@github.com"
           git config user.name "GitHub Actions"
-          git add k8s-deployments/auth-service/deployment.yaml
-          git commit -m "ci: update auth-service image to ${{ github.sha }}"
+          git add k8s-deployments/frontend/deployment.yaml                            # ← FIXED PATH
+          git commit -m "ci: update frontend image to ${{ github.sha }}"              # ← FIXED MESSAGE
           git push
-
