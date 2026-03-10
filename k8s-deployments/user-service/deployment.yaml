@@ -17,7 +17,7 @@ spec:
         - name: user-container
           image: 466825169909.dkr.ecr.ap-south-1.amazonaws.com/user-service:79f7c04d6c2a6120ae0f644f604e04cd130f4924
           ports:
-            - containerPort: 5002
+            - containerPort: 5003
           env:
             - name: MONGO_URI
               valueFrom:
