@@ -1,23 +1,21 @@
 name: Product Service CI
-
 on:
   push:
     branches:
       - main
     paths:
-      - 'microservices/product-service/**'
-
+      - 'backend/microservices/product-service/**'    # ← FIXED PATH
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   IMAGE_NAME: product-service
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}           # ← ADD THIS
 
       - uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -30,21 +28,22 @@ jobs:
           docker login --username AWS --password-stdin $ECR_REGISTRY
 
       - run: |
-          docker build -t $IMAGE_NAME:${{ github.sha }} ./microservices/product-service
+          docker build -t $IMAGE_NAME:${{ github.sha }} ./backend/microservices/product-service  # ← FIXED
 
       - run: |
-          docker tag $IMAGE_NAME:${{ github.sha }} \
-          $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $ECR_REGISTRY/$IMAGE_NAME:latest              # ← ADD
 
       - run: |
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker push $ECR_REGISTRY/$IMAGE_NAME:latest                                           # ← ADD
 
       - name: Update image tag in deployment
         run: |
-          sed -i "s|image: .*auth-service.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|" \
-            k8s-deployments/auth-service/deployment.yaml
+          sed -i "s|image: .*product-service.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|" \
+            k8s-deployments/product-service/deployment.yaml                                      # ← FIXED
           git config user.email "ci@github.com"
           git config user.name "GitHub Actions"
-          git add k8s-deployments/auth-service/deployment.yaml
-          git commit -m "ci: update auth-service image to ${{ github.sha }}"
+          git add k8s-deployments/product-service/deployment.yaml                               # ← FIXED
+          git commit -m "ci: update product-service image to ${{ github.sha }}"                 # ← FIXED
           git push
