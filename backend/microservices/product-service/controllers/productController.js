@@ -71,5 +71,9 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
 })
 
-export { getProducts, getProductById, createProduct, updateProduct, deleteProduct }
+const getTopProducts = asyncHandler(async (req, res) => {
+  const products = await Product.find({}).sort({ rating: -1 }).limit(3)
+  res.json(products)
+})
+export { getProducts, getProductById, createProduct, updateProduct, deleteProduct, getTopProducts }
 
