@@ -91,41 +91,91 @@ AWS Application Load Balancer (ALB)
 # 📁 Project Structure
 
 ```
-aws-eks-project3/
-
-.github/workflows/
-   auth-ci.yml
-   frontend-ci.yml
-   product-ci.yml
-   user-ci.yml
-
-argocd/
-   application.yaml
-
-backend/microservices/
-   auth-service/
-   product-service/
-   user-service/
-
-frontend/
-
-infrastructure/terraform/
-   alb-controller.tf
-   alb-service-account.tf
-   argocd.tf
-   main.tf
-   output.tf
-   providers.tf
-   variables.tf
-
-k8s-deployments/
-   auth-service/
-   product-service/
-   user-service/
-   frontend/
-   ingress.yaml
-   namespace.yaml
-   mongo-secret.yaml
+aws-eks-project3
+│
+├── .github
+│   └── workflows
+│       ├── auth-ci.yml
+│       ├── frontend-ci.yml
+│       ├── product-ci.yml
+│       └── user-ci.yml
+│
+├── argocd
+│   └── application.yaml
+│
+├── backend
+│   └── microservices
+│       ├── auth-service
+│       │   ├── controllers
+│       │   ├── models
+│       │   ├── routes
+│       │   ├── middleware
+│       │   ├── server.js
+│       │   ├── package.json
+│       │   └── Dockerfile
+│       │
+│       ├── product-service
+│       │   ├── controllers
+│       │   ├── models
+│       │   ├── routes
+│       │   ├── middleware
+│       │   ├── server.js
+│       │   ├── package.json
+│       │   └── Dockerfile
+│       │
+│       └── user-service
+│           ├── controllers
+│           ├── models
+│           ├── routes
+│           ├── middleware
+│           ├── server.js
+│           ├── package.json
+│           └── Dockerfile
+│
+├── frontend
+│   ├── public
+│   ├── src
+│   ├── package.json
+│   ├── nginx.conf
+│   └── Dockerfile
+│
+├── infrastructure
+│   └── terraform
+│       ├── alb-controller.tf
+│       ├── alb-service-account.tf
+│       ├── argocd.tf
+│       ├── main.tf
+│       ├── providers.tf
+│       ├── variables.tf
+│       └── output.tf
+│
+├── k8s-deployments
+│   ├── auth-service
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── product-service
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── user-service
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── frontend
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── ingress.yaml
+│   ├── namespace.yaml
+│   └── mongo-secret.yaml
+│
+├── docs
+│   ├── architecture.png
+│   ├── argocd.png
+│   └── frontend.png
+│
+├── README.md
 ```
 
 ---
