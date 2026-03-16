@@ -175,7 +175,7 @@ aws-eks-project3
 │   ├── argocd.png
 │   └── frontend.png
 │
-├── README.md
+└── README.md
 ```
 
 ---
